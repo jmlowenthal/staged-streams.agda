@@ -1,70 +1,88 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NumericUnderscores #-}
 
 import Data.Stream
+import GHC.Num
+import GHC.Integer
+import Data.Function ((&))
+import Prelude (mod, print, (==), not)
 
-hundredM :: [Num]
-hundredM = [x % 10 | x <- 1...100000000]
+gen :: Integer -> Stream Integer
+gen n = stream [x `mod` 10 | x <- [1..n]]
+
+hundredM = gen 100_000_000
+tenM = gen 10_000_000
+tenK = gen 10_000
+ten = gen 10
 
 #if BENCHMARK_sum
-main = foldl _+_ 0 HundredM
+main = print (
+  hundredM
+    & sum)
 #endif
 
--- sumOfSquares : ∀ { n } → Ref Int → Ref (Array Int n) → Statement
--- sumOfSquares r arr =
---   r ← fold _+_ ⟪ + 0 ⟫
---     (ofArr arr
---       ▹ map (λ a → a * a))
+#if BENCHMARK_sumOfSquares
+main = print (
+  hundredM
+    & map (\x -> x * x)
+    & sum)
+#endif
 
--- sumOfSquaresEven : ∀ { n } → Ref Int → Ref (Array Int n) → Statement
--- sumOfSquaresEven r arr =
---   r ← fold _+_ ⟪ + 0 ⟫
---     (ofArr arr
---       ▹ filter (λ e → (e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫)
---       ▹ map (λ a → a * a))
+#if BENCHMARK_sumOfSquaresEven
+main = print (
+  hundredM
+    & filter (\x -> x `mod` 2 == 0)
+    & map (\x -> x * x)
+    & sum)
+#endif
 
--- -- Sum over Cartesian-/outer-product
--- cart : ∀ { n m } → Ref Int → Ref (Array Int n) → Ref (Array Int m) → Statement
--- cart r x y =
---   r ← fold _+_ ⟪ + 0 ⟫
---   (ofArr x
---     ▹ flatmap (λ i → ofArr y ▹ map (λ j → i * j)))
+#if BENCHMARK_cart
+main = print (
+  tenM
+    & concatMap (\i -> ten & map (\j -> i * j))
+    & sum)
+#endif
 
--- maps : ∀ { n } → Ref Int → Ref (Array Int n) → Statement
--- maps r arr =
---   iter (λ e → r ≔ e)
---     (ofArr arr
---       ▹ map (λ e → e * ⟪ + 2 ⟫)
---       ▹ map (λ e → e * ⟪ + 3 ⟫))
+#if BENCHMARK_maps
+main = print (
+  hundredM
+    & map (\e -> e * 2)
+    & map (\e -> e * 3)
+    & foldr (\x y -> y) 0)
+#endif
 
--- filters : ∀ { n } → Ref Int → Ref (Array Int n) → Statement
--- filters r arr =
---   iter (λ e → r ≔ e)
---     (ofArr arr
---       ▹ filter (λ e → ! (e == ⟪ + 5 ⟫))
---       ▹ filter (λ e → ! (e == ⟪ + 10 ⟫)))
+#if BENCHMARK_filters
+main = print (
+  hundredM
+    & filter (\e -> not (e `mod` 5 == 0))
+    & filter (\e -> not (e `mod` 8 == 0))
+    & foldr (\x y -> y) 0)
+#endif
 
--- dotProduct : ∀ { n m } → Ref Int → Ref (Array Int n) → Ref (Array Int m) → Statement
--- dotProduct r x y =
---   r ← fold _+_ ⟪ + 0 ⟫
---     (zipWith (λ i j → i * j) (ofArr x) (ofArr y) {ℕ.z≤n})
+#if BENCHMARK_dotProduct
+main = print (
+  zipWith (\i j -> i * j) tenM tenM
+    & foldr (\x y -> y) 0)
+#endif
 
--- flatmap-after-zipWith : ∀ { n m } → Ref Int → Ref (Array Int n) → Ref (Array Int m) → Statement
--- flatmap-after-zipWith r x y =
---   iter (λ e → r ≔ e)
---     (zipWith _+_ (ofArr x) (ofArr x) {ℕ.z≤n}
---       ▹ flatmap (λ i → ofArr y ▹ map (λ j → i * j)))
+#if BENCHMARK_flatmap_after_zipWith
+main = print (
+  zipWith (+) tenK tenK
+    & concatMap (\i -> tenK & map (\j -> i * j))
+    & foldr (\x y -> y) 0)
+#endif
 
--- zipWith-after-flatmap : ∀ { n } → Ref Int → Ref (Array Int (n ℕ.* n)) → Ref (Array Int n) → Statement
--- zipWith-after-flatmap r x y =
---   iter (λ e → r ≔ e)
---     (zipWith _+_
---     (ofArr x)
---     (flatmap (λ e → ofArr y ▹ map (λ a → a + e)) (ofArr y))
---     {ℕ.s≤s ℕ.z≤n})
+#if BENCHMARK_zipWith_after_flatmap
+main = print (
+  zipWith (+) hundredM (concatMap (\e -> tenK & map (\a -> a + e)) tenK)
+    & foldr (\x y -> y) 0)
+#endif
 
--- flatmap-take : ∀ { n m } → ℕ → Ref Int → Ref (Array Int n) → Ref (Array Int m) → Statement
--- flatmap-take i r x y =
---   iter (λ e → r ≔ e)
---     (ofArr x
---       ▹ flatmap (λ a → ofArr y ▹ map (λ b → a + b))
---       ▹ take ⟪ + i ⟫)
+#if BENCHMARK_flatmap_take
+main = print (
+  tenK
+    & concatMap (\a -> tenK & map (\b -> a + b))
+    & take 20000000
+    & foldr (\x y -> y) 0)
+#endif
