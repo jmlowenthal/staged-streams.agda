@@ -4,11 +4,11 @@
 
 import Data.Stream
 import GHC.Num
-import GHC.Integer
+import GHC.Int
 import Data.Function ((&))
 import Prelude (mod, print, (==), not)
 
-gen :: Integer -> Stream Integer
+gen :: Int -> Stream Int
 gen n = stream [x `mod` 10 | x <- [1..n]]
 
 hundredM = gen 100_000_000
