@@ -72,8 +72,8 @@ module Tests ⦃ _ : C ⦄ where
   filters r arr =
     iter (λ e → r ≔ e)
       (ofArr arr
-        ▹ filter (λ e → ! (e == ⟪ + 5 ⟫))
-        ▹ filter (λ e → ! (e == ⟪ + 10 ⟫)))
+        ▹ filter (λ e → ! ((e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫))
+        ▹ filter (λ e → ! ((e % ⟪ + 8 ⟫) == ⟪ + 0 ⟫)))
 
   dotProduct : ∀ { n m } → Ref Int → Ref (Array Int n) → Ref (Array Int m) → Statement
   dotProduct r x y =
