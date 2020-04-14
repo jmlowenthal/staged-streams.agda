@@ -3,13 +3,18 @@
 {-# LANGUAGE NumericUnderscores #-}
 
 import Data.Stream
+import Data.Array
 import GHC.Num
 import GHC.Int
 import Data.Function ((&))
 import Prelude (mod, print, (==), not)
 
 gen :: Int -> Stream Int
-gen n = stream [x `mod` 10 | x <- [1..n]]
+gen n = Stream next (L 0)
+  where
+    arr = listArray (0, n - 1) [x `mod` 10 | x <- [1..n]]
+    next (L i) = if n == i then Done
+                 else Yield (arr ! i) (L (i + 1))
 
 hundredM = gen 100_000_000
 tenM = gen 10_000_000
