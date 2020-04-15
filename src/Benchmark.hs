@@ -8,7 +8,7 @@ import Data.Stream hiding (return)
 import Data.Array
 import Data.Function
 import Data.Maybe
-import Prelude hiding (foldr, foldl, map, sum, filter, concatMap, zipWith)
+import Prelude hiding (foldr, foldl, map, sum, filter, concatMap, zipWith, take)
 
 nat :: Int -> Stream Int
 nat n = unfoldr step 0

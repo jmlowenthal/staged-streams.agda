@@ -91,7 +91,7 @@ module Tests ⦃ _ : CWithPrintf ⦄ where
   filters =
     iter (λ e → printInt e)
       (100M
-        ▹ filter (λ e → ! ((e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫))
+        ▹ filter (λ e → ! ((e % ⟪ + 5 ⟫) == ⟪ + 0 ⟫))
         ▹ filter (λ e → ! ((e % ⟪ + 8 ⟫) == ⟪ + 0 ⟫)))
 
   dotProduct : Statement
