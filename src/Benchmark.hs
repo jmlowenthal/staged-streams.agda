@@ -6,8 +6,8 @@ import Data.Stream
 import Data.Array
 import GHC.Num
 import GHC.Int
-import Data.Function ((&))
-import Prelude (mod, print, (==), not)
+import Data.Function
+import Prelude hiding (foldr, foldl, map, sum)
 
 gen :: Int -> Stream Int
 gen n = Stream next (L 0)
@@ -20,6 +20,8 @@ hundredM = gen 100_000_000
 tenM = gen 10_000_000
 tenK = gen 10_000
 ten = gen 10
+
+printAll = foldl (\x y -> x >>= \_ -> print y) (putStr "")
 
 #if BENCHMARK_sum
 main = print (
@@ -50,44 +52,44 @@ main = print (
 #endif
 
 #if BENCHMARK_maps
-main = print (
+main =
   hundredM
     & map (\e -> e * 2)
     & map (\e -> e * 3)
-    & foldr (\x y -> y) 0)
+    & printAll
 #endif
 
 #if BENCHMARK_filters
-main = print (
+main =
   hundredM
     & filter (\e -> not (e `mod` 5 == 0))
     & filter (\e -> not (e `mod` 8 == 0))
-    & foldr (\x y -> y) 0)
+    & printAll
 #endif
 
 #if BENCHMARK_dotProduct
-main = print (
+main =
   zipWith (\i j -> i * j) tenM tenM
-    & foldr (\x y -> y) 0)
+    & printAll
 #endif
 
 #if BENCHMARK_flatmap_after_zipWith
-main = print (
+main =
   zipWith (+) tenK tenK
     & concatMap (\i -> tenK & map (\j -> i * j))
-    & foldr (\x y -> y) 0)
+    & printAll
 #endif
 
 #if BENCHMARK_zipWith_after_flatmap
-main = print (
+main =
   zipWith (+) hundredM (concatMap (\e -> tenK & map (\a -> a + e)) tenK)
-    & foldr (\x y -> y) 0)
+    & printAll
 #endif
 
 #if BENCHMARK_flatmap_take
-main = print (
+main =
   tenK
     & concatMap (\a -> tenK & map (\b -> a + b))
     & take 20000000
-    & foldr (\x y -> y) 0)
+    & printAll
 #endif
