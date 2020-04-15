@@ -105,5 +105,12 @@ maps-can-zip s t f g p =
     
 zip-map : ∀ { α β α' β' } (s : SStream α) (t : SStream β) → (α → α') → (β → β')
   → ∥ s ∥ₛ ℕ.+ ∥ t ∥ₛ ℕ.≤ 1 → Claim (α' × β')
-zip-map s t f g p = zip (map' f s) (map' g t) {maps-can-zip s t f g p} ≈ map' (λ { (x , y) → f x , g y }) (zip s t {p})
+zip-map s t f g p =
+  zip (map' f s) (map' g t) {maps-can-zip s t f g p}
+    ≈ map' (λ { (x , y) → f x , g y }) (zip s t {p})
 
+zipWith-map : ∀ { α β α' β' γ } (s : SStream α) (t : SStream β)
+  → (α' → β' → γ) → (α → α') → (β → β') → ∥ s ∥ₛ ℕ.+ ∥ t ∥ₛ ℕ.≤ 1 → Claim γ
+zipWith-map s t f g h p =
+  zipWith f (map' g s) (map' h t) {maps-can-zip s t g h p}
+    ≈ zipWith (λ x y → f (g x) (h y)) s t {p}

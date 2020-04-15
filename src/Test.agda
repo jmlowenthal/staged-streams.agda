@@ -3,6 +3,7 @@ open import C.Extras
 open import Data.Nat as ℕ using (ℕ)
 open import Data.Integer as ℤ using (+_)
 open import Data.String as String using (String ; _++_)
+open import Data.Product using (proj₂ ; _,_ ; _×_)
 open import IO
 open import Print.Print
 open import Streams.Base
@@ -54,11 +55,61 @@ generate-test {α} name (s ≈ t) r =
 main =
   run (IO.putStr ex)
   where
-    ex : String
-    ex = print-main-return (λ r →
-      r ≔ ⟪ + 0 ⟫ ；
+    tests : ∀ ⦃ _ : C ⦄ → Ref Int → Statement
+    tests r =
       putstr "Running tests:\n" ；
-      generate-test "map'=map" (map'≅map (λ e → e) (iota 0)) r ；
-      generate-test "map-map" (map-map (iota 0) (λ e → e * ⟪ + 2 ⟫) (λ e → e + ⟪ + 2 ⟫)) r ；
-      generate-test "map-id" (map-id (iota 0)) r ；
-      generate-test "filter-filter" (filter-filter (iota 0) (λ e → (e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫) λ e → (e % ⟪ + 5 ⟫) == ⟪ + 0 ⟫) r)
+      generate-test "map'=map"
+        (map'≅map (λ e → e) (iota 0)) r ；
+      generate-test "map-map"
+        (map-map (iota 0) (λ e → e * ⟪ + 2 ⟫) (λ e → e + ⟪ + 2 ⟫)) r ；
+      generate-test "map-id"
+        (map-id (iota 0)) r ；
+      generate-test "filter-filter"
+        (filter-filter
+          (iota 0)
+          (λ e → (e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫)
+          (λ e → (e % ⟪ + 5 ⟫) == ⟪ + 0 ⟫)) r ；
+      generate-test "filter-true"
+        (filter-true (iota 0)) r ；
+      generate-test "filter-map"
+        (filter-map
+          (iota 0)
+          (λ e → (e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫)
+          (λ e → e * ⟪ + 10 ⟫)) r ；
+      generate-test "flatmap-map"
+        (flatmap-map
+          (iota 0)
+          (λ e → nat 10)
+          (λ e → e * ⟪ + 2 ⟫)) r ；
+      generate-test "map-flatmap"
+        (map-flatmap
+          (iota 0)
+          (λ e → e * ⟪ + 4 ⟫)
+          (λ e → unfold (λ i → i < e , i , i + ⟪ + 1 ⟫) ⟪ + 0 ⟫)) r ；
+      generate-test "flatmap-filter"
+        (flatmap-filter
+          (iota 0)
+          (λ e → unfold (λ i → i < e , i , i + ⟪ + 1 ⟫) ⟪ + 0 ⟫)
+          (λ e → (e % ⟪ + 7 ⟫) == ⟪ + 0 ⟫)) r ；
+      generate-test "filter-flatmap"
+        (filter-flatmap
+          (iota 0)
+          (λ e → (e % ⟪ + 3 ⟫) == ⟪ + 0 ⟫)
+          (λ e → unfold (λ i → i < e , i , i + ⟪ + 2 ⟫) ⟪ + 0 ⟫)) r ；
+      generate-test "zipWith-map"
+        (zipWith-map
+          (iota 0)
+          (iota 20)
+          (λ x y → x + (⟪ + 2 ⟫ * y))
+          (λ e → e + ⟪ + 6 ⟫)
+          (λ e → e - ⟪ + 10 ⟫)
+          ℕ.z≤n) r
+    ex : String
+    ex =
+      "#include <stdio.h>\n"
+      ++ "int main(void) {\n"
+        ++ "int result = 0;\n"
+        ++ proj₂ (tests ⦃ Print-C ⦄ "result" 0)
+        ++ "return result;\n"
+      ++ "}"
+      
