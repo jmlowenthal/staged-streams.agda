@@ -8,7 +8,7 @@ import GHC.Num
 import GHC.Int
 import Data.Function
 import Data.Maybe
-import Prelude hiding (foldr, foldl, map, sum, filter, concatMap)
+import Prelude hiding (foldr, foldl, map, sum, filter, concatMap, zipWith)
 
 nat :: Int -> Stream Int
 nat n = unfoldr step 0
