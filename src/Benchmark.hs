@@ -2,10 +2,10 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE NumericUnderscores #-}
 
-import Data.Stream
-import Data.Array
 import GHC.Num
 import GHC.Int
+import Data.Stream hiding (return)
+import Data.Array
 import Data.Function
 import Data.Maybe
 import Prelude hiding (foldr, foldl, map, sum, filter, concatMap, zipWith)
@@ -27,7 +27,7 @@ tenK = gen 10_000
 ten = gen 10
 
 printAll :: Show a => Stream a -> IO ()
-printAll = foldl (\x y -> x >>= \_ -> print y) (putStr "")
+printAll = foldr (\x y -> print x >> y) (return ())
 
 #if BENCHMARK_sum
 main = print (
