@@ -44,7 +44,7 @@ module Tests ⦃ _ : CWithPrintf ⦄ where
 
 
   gen : ℕ → Stream Int
-  gen n = nat n ▹ map (λ e → e % ⟪ + 10 ⟫ - ⟪ + 2 ⟫ * (e % ⟪ + 7 ⟫))
+  gen n = nat n ▹ map (λ e → e % ⟪ + 10 ⟫ - (⟪ + 2 ⟫ * (e % ⟪ + 7 ⟫)))
 
   100M = gen 100000000
   10M =  gen  10000000
