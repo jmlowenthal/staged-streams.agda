@@ -14,6 +14,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_ ; refl)
 import Induction.WellFounded as Wf
 open import Function
 import Level
+import Data.Integer as ℤ
 
 -- Stream Fusion, to Completeness ----------------------------------------
 
@@ -306,7 +307,7 @@ zipProducer {α} {β} (producer {σ₁} (i₁ , unfolder (t₁ , c₁ , s₁))) 
       decl Bool λ x →
       decl Bool λ y →
       x ← t₁ a ；
-      r ← t₂ b ；
+      y ← t₂ b ；
       r ≔ (★ x) && (★ y)
     s : σ₁ × σ₂ → (α × β → Statement) → Statement
     s (a , b) k = s₁ a (λ x → s₂ b (λ y → k (x , y)))
