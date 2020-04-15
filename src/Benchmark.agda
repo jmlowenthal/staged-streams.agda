@@ -42,131 +42,110 @@ open CWithPrintf ⦃ ... ⦄
 
 module Tests ⦃ _ : CWithPrintf ⦄ where
 
-  sum : ∀ { n } → Ref (Array Int n) → Statement
-  sum arr =
+
+  gen : ℕ → Stream Int
+  gen n = nat n ▹ map (λ e → e % ⟪ + 10 ⟫ - ⟪ + 2 ⟫ * (e % ⟪ + 7 ⟫))
+
+  100M = gen 100000000
+  10M =  gen  10000000
+  10K =  gen     10000
+
+  sum : Statement
+  sum =
     decl Int λ r →
-    r ← fold _+_ ⟪ + 0 ⟫ (ofArr arr) ；
+    r ← fold _+_ ⟪ + 0 ⟫ 100M ；
     printInt (★ r)
 
-  sumOfSquares : ∀ { n } → Ref (Array Int n) → Statement
-  sumOfSquares arr =
+  sumOfSquares : Statement
+  sumOfSquares =
     decl Int λ r →
     r ← fold _+_ ⟪ + 0 ⟫
-      (ofArr arr
-        ▹ map (λ a → a * a)) ；
+      (100M ▹ map (λ a → a * a)) ；
     printInt (★ r)
 
-  sumOfSquaresEven : ∀ { n } → Ref (Array Int n) → Statement
-  sumOfSquaresEven arr =
+  sumOfSquaresEven : Statement
+  sumOfSquaresEven =
     decl Int λ r →
     r ← fold _+_ ⟪ + 0 ⟫
-      (ofArr arr
+      (100M
         ▹ filter (λ e → (e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫)
         ▹ map (λ a → a * a)) ；
     printInt (★ r)
 
   -- Sum over Cartesian-/outer-product
-  cart : ∀ { n m } → Ref (Array Int n) → Ref (Array Int m) → Statement
-  cart x y =
+  cart : Statement
+  cart =
     decl Int λ r →
     r ← fold _+_ ⟪ + 0 ⟫
-      (ofArr x
-        ▹ flatmap (λ i → ofArr y ▹ map (λ j → i * j))) ；
+      (10M ▹ flatmap (λ i → 10M ▹ map (λ j → i * j))) ；
     printInt (★ r)
 
-  maps : ∀ { n } → Ref (Array Int n) → Statement
-  maps arr =
+  maps : Statement
+  maps =
     iter (λ e → printInt e)
-      (ofArr arr
+      (100M
         ▹ map (λ e → e * ⟪ + 2 ⟫)
         ▹ map (λ e → e * ⟪ + 3 ⟫))
 
-  filters : ∀ { n } → Ref (Array Int n) → Statement
-  filters arr =
+  filters : Statement
+  filters =
     iter (λ e → printInt e)
-      (ofArr arr
+      (100M
         ▹ filter (λ e → ! ((e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫))
         ▹ filter (λ e → ! ((e % ⟪ + 8 ⟫) == ⟪ + 0 ⟫)))
 
-  dotProduct : ∀ { n m } → Ref (Array Int n) → Ref (Array Int m) → Statement
-  dotProduct x y =
+  dotProduct : Statement
+  dotProduct =
     decl Int λ r →
     r ← fold _+_ ⟪ + 0 ⟫
-      (zipWith (λ i j → i * j) (ofArr x) (ofArr y) {ℕ.z≤n}) ；
+      (zipWith (λ i j → i * j) 10M 10M {ℕ.z≤n}) ；
     printInt (★ r)
 
-  flatmap-after-zipWith : ∀ { n m } → Ref (Array Int n) → Ref (Array Int m) → Statement
-  flatmap-after-zipWith x y =
+  flatmap-after-zipWith : Statement
+  flatmap-after-zipWith =
     iter (λ e → printInt e)
-      (zipWith _+_ (ofArr x) (ofArr x) {ℕ.z≤n}
-        ▹ flatmap (λ i → ofArr y ▹ map (λ j → i * j)))
+      (zipWith _+_ 10K 10K {ℕ.z≤n}
+        ▹ flatmap (λ i → 10K ▹ map (λ j → i * j)))
 
-  zipWith-after-flatmap : ∀ { n } → Ref (Array Int (n ℕ.* n)) → Ref (Array Int n) → Statement
-  zipWith-after-flatmap x y =
+  zipWith-after-flatmap : Statement
+  zipWith-after-flatmap =
     iter (λ e → printInt e)
-      (zipWith _+_
-      (ofArr x)
-      (flatmap (λ e → ofArr y ▹ map (λ a → a + e)) (ofArr y))
-      {ℕ.s≤s ℕ.z≤n})
+      (zipWith _+_ 100M (flatmap (λ e → 10K ▹ map (λ a → a + e)) 10K) {ℕ.s≤s ℕ.z≤n})
 
-  flatmap-take : ∀ { n m } → ℕ → Ref (Array Int n) → Ref (Array Int m) → Statement
-  flatmap-take i x y =
+  flatmap-take : Statement
+  flatmap-take =
     iter (λ e → printInt e)
-      (ofArr x
-        ▹ flatmap (λ a → ofArr y ▹ map (λ b → a + b))
-        ▹ take ⟪ + i ⟫)
-
-IntArraysFunc : ∀ ⦃ _ : C ⦄ → List ℕ → Set
-IntArraysFunc [] = Statement
-IntArraysFunc (h ∷ t) = Ref (Array Int h) → IntArraysFunc t
+      (10K
+        ▹ flatmap (λ a → 10K ▹ map (λ b → a + b))
+        ▹ take ⟪ + 20000000 ⟫)
 
 AST-CWithPrintf : CWithPrintf
 CWithPrintf.ℐ AST-CWithPrintf = Print-C
 CWithPrintf.printInt AST-CWithPrintf e n = n , "printf(\"%d\\n\", " ++ e ++ ");\n"
 
-benchmark-function : String → ∀ l → (∀ ⦃ _ : CWithPrintf ⦄ → IntArraysFunc l) → String
-benchmark-function name l body =
+benchmark-function : String → (∀ ⦃ _ : CWithPrintf ⦄ → Statement) → String
+benchmark-function name body =
   "#if BENCHMARK_" ++ name ++ "\n"
   ++ "int main(void){\n"
-    ++ decl-int-arrays l (body ⦃ AST-CWithPrintf ⦄) 1
+    ++ proj₂ (body ⦃ AST-CWithPrintf ⦄ 0)
     ++ "return 0;\n"
   ++ "}\n"
   ++ "#endif\n\n"
-  where
-    init : ∀ ⦃ _ : C ⦄ n → Ref (Array Int n) → Statement
-    init n ref =
-      for ⟪ + 0 ⟫ to ⟪ + n ℤ.- + 1 ⟫ then λ i → (
-        ref [ ★ i ] ≔ (★ i) % ⟪ + 10 ⟫
-      )
-    decl-int-arrays : ∀ l → IntArraysFunc ⦃ Print-C ⦄ l → ℕ → String
-    decl-int-arrays [] k n = proj₂ (k n)
-    decl-int-arrays (h ∷ t) k n =
-      let m , initialiser = init ⦃ Print-C ⦄ h ("x" ++ ℕs.show n) (ℕ.suc n) in
-        "/* INT[" ++ ℕs.show h ++ "] */ int* x" ++ (ℕs.show n)
-          ++ " = malloc(" ++ ℕs.show h ++ " * sizeof(int));\n"
-        ++ initialiser
-        ++ decl-int-arrays t (k ("x" ++ ℕs.show n)) m
 
 main =
   run (IO.putStr ex)
   where
-    100M = 100000000
-    10M =   10000000
-    10K =      10000
     ex : String
     ex =
       "#include <stdio.h>\n"
       ++ "#include <stdlib.h>\n"
-      ++ (benchmark-function "sum" (100M ∷ []) Tests.sum)
-      ++ (benchmark-function "sumOfSquares" (100M ∷ []) Tests.sumOfSquares)
-      ++ (benchmark-function "sumOfSquaresEven" (100M ∷ []) Tests.sumOfSquaresEven)
-      ++ (benchmark-function "cart" (10M ∷ 10 ∷ []) Tests.cart)
-      ++ (benchmark-function "maps" (100M ∷ []) Tests.maps)
-      ++ (benchmark-function "filters" (100M ∷ []) Tests.filters)
-      ++ (benchmark-function "dotProduct" (10M ∷ 10M ∷ []) Tests.dotProduct)
-      ++ (benchmark-function "flatmap_after_zipWith" (10K ∷ 10K ∷ [])
-            Tests.flatmap-after-zipWith)
-      ++ (benchmark-function "zipWith_after_flatmap" (_ ∷ 10K ∷ [])
-            Tests.zipWith-after-flatmap)
-      ++ (benchmark-function "flatmap_take" (10K ∷ 10K ∷ [])
-            (Tests.flatmap-take ((10K ℕ.* 10K) ℕ÷./ 5)))
+      ++ (benchmark-function "sum" Tests.sum)
+      ++ (benchmark-function "sumOfSquares" Tests.sumOfSquares)
+      ++ (benchmark-function "sumOfSquaresEven" Tests.sumOfSquaresEven)
+      ++ (benchmark-function "cart" Tests.cart)
+      ++ (benchmark-function "maps" Tests.maps)
+      ++ (benchmark-function "filters" Tests.filters)
+      ++ (benchmark-function "dotProduct" Tests.dotProduct)
+      ++ (benchmark-function "flatmap_after_zipWith" Tests.flatmap-after-zipWith)
+      ++ (benchmark-function "zipWith_after_flatmap" Tests.zipWith-after-flatmap)
+      ++ (benchmark-function "flatmap_take" Tests.flatmap-take)

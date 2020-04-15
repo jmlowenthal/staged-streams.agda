@@ -7,20 +7,26 @@ import Data.Array
 import GHC.Num
 import GHC.Int
 import Data.Function
-import Prelude hiding (foldr, foldl, map, sum)
+import Data.Maybe
+import Prelude hiding (foldr, foldl, map, sum, filter, concatMap)
+
+nat :: Int -> Stream Int
+nat n = unfoldr step 0
+  where
+    step :: Int -> Maybe (Int, Int)
+    step i = if i < n then Just (i, i + 1) else Nothing
 
 gen :: Int -> Stream Int
-gen n = Stream next (L 0)
-  where
-    arr = listArray (0, n - 1) [x `mod` 10 | x <- [1..n]]
-    next (L i) = if n == i then Done
-                 else Yield (arr ! i) (L (i + 1))
+gen n =
+  nat n
+    & map (\e -> e `mod` 10 - 2 * (e `mod` 7))
 
 hundredM = gen 100_000_000
 tenM = gen 10_000_000
 tenK = gen 10_000
 ten = gen 10
 
+printAll :: Show a => Stream a -> IO ()
 printAll = foldl (\x y -> x >>= \_ -> print y) (putStr "")
 
 #if BENCHMARK_sum

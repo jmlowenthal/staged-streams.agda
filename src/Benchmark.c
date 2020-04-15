@@ -6,18 +6,13 @@
 #define TEN_K         10000
 #define TEN              10
 
-#define CREATE(a, n) \
-  int* a = malloc(n * sizeof(int));\
-  for (int i = 0; i < n; ++i) { \
-    a[i] = i % 10; \
-  }
+#define GEN(i) (((i) % 10) - 2 * ((i) % 7))
 
 #if BENCHMARK_sum
 int main(void) {
-  CREATE(arr, HUNDRED_M);
   int sum = 0;
   for (int i = 0; i < HUNDRED_M; ++i) {
-    sum += arr[i];
+    sum += GEN(i);
   }
   printf("%d\n", sum)
   return 0;
@@ -26,10 +21,9 @@ int main(void) {
 
 #if BENCHMARK_sumOfSquares
 int main(void) {
-  CREATE(arr, HUNDRED_M);
   int sum = 0;
   for (int i = 0; i < HUNDRED_M; ++i) {
-    sum += arr[i] * arr[i];
+    sum += GEN(i) * GEN(i);
   }
   printf("%d\n", sum);
   return 0;
@@ -38,10 +32,9 @@ int main(void) {
 
 #if BENCHMARK_sumOfSquaresEven
 int main(void) {
-  CREATE(arr, HUNDRED_M);
   int sum = 0;
   for (int i = 0; i < HUNDRED_M; ++i) {
-    int x = arr[i];
+    int x = GEN(i);
     if (x % 2 == 0) {
       sum += x * x;
     }
@@ -53,12 +46,10 @@ int main(void) {
 
 #if BENCHMARK_cart
 int main(void) {
-  CREATE(x, TEN_M);
-  CREATE(y, TEN);
   int sum = 0;
   for (int i = 0; i < TEN_M; ++i) {
     for (int j = 0; j < TEN; ++j) {
-      sum += x[i] * y[j];
+      sum += GEN(i) * GEN(j);
     }
   }
   printf("%d\n", sum);
@@ -68,9 +59,8 @@ int main(void) {
 
 #if BENCHMARK_maps
 int main(void) {
-  CREATE(arr, HUNDRED_M);
   for (int i = 0; i < HUNDRED_M; ++i) {
-    printf("%d\n", arr[i] * 2 * 3);
+    printf("%d\n", GEN(i) * 2 * 3);
   }
   return 0;
 }
@@ -78,9 +68,8 @@ int main(void) {
 
 #if BENCHMARK_filters
 int main(void) {
-  CREATE(arr, HUNDRED_M);
   for (int i = 0; i < HUNDRED_M; ++i) {
-    int y = arr[i];
+    int y = GEN(i);
     if (y % 5 != 0 && y % 8 != 0) {
       printf("%d\n", y);
     }
@@ -91,10 +80,8 @@ int main(void) {
 
 #if BENCHMARK_dotProduct
 int main(void) {
-  CREATE(x, TEN_M);
-  CREATE(y, TEN_M);
   for (int i = 0; i < TEN_M; ++i) {
-    printf("%d\n", x[i] * y[i]);
+    printf("%d\n", GEN(i) * GEN(i));
   }
   return 0;
 }
@@ -102,12 +89,9 @@ int main(void) {
 
 #if BENCHMARK_flatmap_after_zipWith
 int main(void) {
-  CREATE(x, TEN_K);
-  CREATE(y, TEN_K);
-  CREATE(z, TEN_K);
   for (int i = 0; i < TEN_K; ++i) {
     for (int j = 0; j < TEN_K; ++j) {
-      printf("%d\n", (x[i] + y[i]) * z[j]);
+      printf("%d\n", (GEN(i) + GEN(i)) * GEN(j));
     }
   }
   return 0;
@@ -116,12 +100,9 @@ int main(void) {
 
 #if BENCHMARK_zipWith_after_flatmap
 int main(void) {
-  CREATE(x, HUNDRED_M);
-  CREATE(y, TEN_K);
-  CREATE(z, TEN_K);
   for (int i = 0; i < TEN_K; ++i) {
     for (int j = 0; j < TEN_K; ++j) {
-      printf("%d\n", x[i * TEN_K + j] + (y[j] + z[j]));
+      printf("%d\n", GEN(i * TEN_K + j) + (GEN(j) + GEN(j)));
     }
   }
   return 0;
@@ -130,13 +111,10 @@ int main(void) {
 
 #if BENCHMARK_flatmap_take
 int main(void) {
-  CREATE(x, TEN_K);
-  CREATE(y, TEN_K);
-  int d = 0;
-  for (int i = 0; i < TEN_K && d < 20000000; ++i) {
-    for (int j = 0; j < TEN_K && d < 20000000; ++j) {
-      printf("%d\n", x[i] + y[j]);
-      ++d;
+  // Emit 20,000,000 items
+  for (int i = 0; i < 2000; ++i) {
+    for (int j = 0; j < TEN_K; ++j) {
+      printf("%d\n", GEN(i) + GEN(j));
     }
   }
   return 0;
