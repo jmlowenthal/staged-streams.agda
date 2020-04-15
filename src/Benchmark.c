@@ -80,9 +80,11 @@ int main(void) {
 
 #if BENCHMARK_dotProduct
 int main(void) {
+  int sum = 0;
   for (int i = 0; i < TEN_M; ++i) {
-    printf("%d\n", GEN(i) * GEN(i));
+    sum += GEN(i) * GEN(i);
   }
+  printf("%d\n", sum);
   return 0;
 }
 #endif
