@@ -77,7 +77,7 @@ module Tests ⦃ _ : CWithPrintf ⦄ where
   cart =
     decl Int λ r →
     r ← fold _+_ ⟪ + 0 ⟫
-      (10M ▹ flatmap (λ i → 10M ▹ map (λ j → i * j))) ；
+      (10M ▹ flatmap (λ i → (gen 10) ▹ map (λ j → i * j))) ；
     printInt (★ r)
 
   maps : Statement

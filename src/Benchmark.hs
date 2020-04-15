@@ -74,9 +74,9 @@ main =
 #endif
 
 #if BENCHMARK_dotProduct
-main =
+main = print (
   zipWith (\i j -> i * j) tenM tenM
-    & printAll
+    & sum)
 #endif
 
 #if BENCHMARK_flatmap_after_zipWith
