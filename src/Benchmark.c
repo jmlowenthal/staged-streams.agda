@@ -14,7 +14,7 @@ int main(void) {
   for (int i = 0; i < HUNDRED_M; ++i) {
     sum += GEN(i);
   }
-  printf("%d\n", sum)
+  printf("%d\n", sum);
   return 0;
 }
 #endif
