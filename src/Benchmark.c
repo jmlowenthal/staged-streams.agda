@@ -104,7 +104,7 @@ int main(void) {
 int main(void) {
   for (int i = 0; i < TEN_K; ++i) {
     for (int j = 0; j < TEN_K; ++j) {
-      printf("%d\n", GEN(i * TEN_K + j) + (GEN(j) + GEN(j)));
+      printf("%d\n", GEN(i * TEN_K + j) + (GEN(i) + GEN(j)));
     }
   }
   return 0;
