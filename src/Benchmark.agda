@@ -17,13 +17,15 @@ import Data.Nat.DivMod as ℕ÷
 
 module Benchmark where
 
-record CWithPrintf : Set₁ where
+record CWithExtras : Set₁ where
   field
     ⦃ ℐ ⦄ : C
+    declBigInt : (C.Ref ℐ Int → C.Statement ℐ) → C.Statement ℐ
     printInt : C.Expr ℐ Int → C.Statement ℐ
+    printBigInt : C.Expr ℐ Int → C.Statement ℐ
 
 open C ⦃ ... ⦄
-open CWithPrintf ⦃ ... ⦄
+open CWithExtras ⦃ ... ⦄
 
 -- Kiselyov et al., Section §7:
 --
@@ -40,7 +42,7 @@ open CWithPrintf ⦃ ... ⦄
 --
 -- Input: All tests were run with the same input set. For the sum, sumOfSquares, sumOfSquaresEven, maps, filters we used an array of N = 100,000,000 small integers: xᵢ = i mod 10. The cart test iterates over two arrays. An outer one of 10,000,000 integers and an inner one of 10. For the dotProduct we used 10,000,000 integers, for the flatMap_after_zipWith 10,000, for the zipWith_after_flatMap 10,000,000 and for the flatmap_take N numbers sub-sized by 20% of N."
 
-module Tests ⦃ _ : CWithPrintf ⦄ where
+module Tests ⦃ _ : CWithExtras ⦄ where
 
 
   gen : ℕ → Stream Int
@@ -52,33 +54,33 @@ module Tests ⦃ _ : CWithPrintf ⦄ where
 
   sum : Statement
   sum =
-    decl Int λ r →
+    declBigInt λ r →
     r ← fold _+_ ⟪ + 0 ⟫ 100M ；
-    printInt (★ r)
+    printBigInt (★ r)
 
   sumOfSquares : Statement
   sumOfSquares =
-    decl Int λ r →
+    declBigInt λ r →
     r ← fold _+_ ⟪ + 0 ⟫
       (100M ▹ map (λ a → a * a)) ；
-    printInt (★ r)
+    printBigInt (★ r)
 
   sumOfSquaresEven : Statement
   sumOfSquaresEven =
-    decl Int λ r →
+    declBigInt λ r →
     r ← fold _+_ ⟪ + 0 ⟫
       (100M
         ▹ filter (λ e → (e % ⟪ + 2 ⟫) == ⟪ + 0 ⟫)
         ▹ map (λ a → a * a)) ；
-    printInt (★ r)
+    printBigInt (★ r)
 
   -- Sum over Cartesian-/outer-product
   cart : Statement
   cart =
-    decl Int λ r →
+    declBigInt λ r →
     r ← fold _+_ ⟪ + 0 ⟫
       (10M ▹ flatmap (λ i → (gen 10) ▹ map (λ j → i * j))) ；
-    printInt (★ r)
+    printBigInt (★ r)
 
   maps : Statement
   maps =
@@ -96,10 +98,10 @@ module Tests ⦃ _ : CWithPrintf ⦄ where
 
   dotProduct : Statement
   dotProduct =
-    decl Int λ r →
+    declBigInt λ r →
     r ← fold _+_ ⟪ + 0 ⟫
       (zipWith (λ i j → i * j) 10M 10M {ℕ.z≤n}) ；
-    printInt (★ r)
+    printBigInt (★ r)
 
   flatmap-after-zipWith : Statement
   flatmap-after-zipWith =
@@ -119,15 +121,20 @@ module Tests ⦃ _ : CWithPrintf ⦄ where
         ▹ flatmap (λ a → 10K ▹ map (λ b → a + b))
         ▹ take ⟪ + 20000000 ⟫)
 
-AST-CWithPrintf : CWithPrintf
-CWithPrintf.ℐ AST-CWithPrintf = Print-C
-CWithPrintf.printInt AST-CWithPrintf e n = n , "printf(\"%d\\n\", " ++ e ++ ");\n"
+AST-CWithExtras : CWithExtras
+CWithExtras.ℐ AST-CWithExtras = Print-C
+CWithExtras.declBigInt AST-CWithExtras f n =
+  let ref = "x" ++ ℕs.show n in
+  let n , f = f ref (ℕ.suc n) in
+    n , "long long int " ++ ref ++ ";\n" ++ f
+CWithExtras.printInt AST-CWithExtras e n = n , "printf(\"%d\\n\", " ++ e ++ ");\n"
+CWithExtras.printBigInt AST-CWithExtras e n = n , "printf(\"%lld\\n\", " ++ e ++ ");\n"
 
-benchmark-function : String → (∀ ⦃ _ : CWithPrintf ⦄ → Statement) → String
+benchmark-function : String → (∀ ⦃ _ : CWithExtras ⦄ → Statement) → String
 benchmark-function name body =
   "#if BENCHMARK_" ++ name ++ "\n"
   ++ "int main(void){\n"
-    ++ proj₂ (body ⦃ AST-CWithPrintf ⦄ 0)
+    ++ proj₂ (body ⦃ AST-CWithExtras ⦄ 0)
     ++ "return 0;\n"
   ++ "}\n"
   ++ "#endif\n\n"

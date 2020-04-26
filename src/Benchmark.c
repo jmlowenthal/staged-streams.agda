@@ -10,49 +10,49 @@
 
 #if BENCHMARK_sum
 int main(void) {
-  int sum = 0;
+  long long int sum = 0;
   for (int i = 0; i < HUNDRED_M; ++i) {
     sum += GEN(i);
   }
-  printf("%d\n", sum);
+  printf("%lld\n", sum);
   return 0;
 }
 #endif
 
 #if BENCHMARK_sumOfSquares
 int main(void) {
-  int sum = 0;
+  long long int sum = 0;
   for (int i = 0; i < HUNDRED_M; ++i) {
     sum += GEN(i) * GEN(i);
   }
-  printf("%d\n", sum);
+  printf("%lld\n", sum);
   return 0;
 }
 #endif
 
 #if BENCHMARK_sumOfSquaresEven
 int main(void) {
-  int sum = 0;
+  long long int sum = 0;
   for (int i = 0; i < HUNDRED_M; ++i) {
     int x = GEN(i);
     if (x % 2 == 0) {
       sum += x * x;
     }
   }
-  printf("%d\n", sum);
+  printf("%lld\n", sum);
   return 0;
 }
 #endif
 
 #if BENCHMARK_cart
 int main(void) {
-  int sum = 0;
+  long long int sum = 0;
   for (int i = 0; i < TEN_M; ++i) {
     for (int j = 0; j < TEN; ++j) {
       sum += GEN(i) * GEN(j);
     }
   }
-  printf("%d\n", sum);
+  printf("%lld\n", sum);
   return 0;
 }
 #endif
@@ -80,11 +80,11 @@ int main(void) {
 
 #if BENCHMARK_dotProduct
 int main(void) {
-  int sum = 0;
+  long long int sum = 0;
   for (int i = 0; i < TEN_M; ++i) {
     sum += GEN(i) * GEN(i);
   }
-  printf("%d\n", sum);
+  printf("%lld\n", sum);
   return 0;
 }
 #endif
