@@ -272,7 +272,7 @@ take n (nested { β = α } (p , f)) =
       let nr , a = nra in
         mapRaw
           (λ el k → nr ≔ ★ nr - ⟪ int 1 ⟫ ； k el)
-          (moreTermination (λ r → r ≔ (★ nr) == ⟪ int 0 ⟫) (f a))
+          (moreTermination (λ r → r ≔ (★ nr) > ⟪ int 0 ⟫) (f a))
   )
 
 -- TODO: drop
