@@ -85,17 +85,17 @@ main =
         (map-flatmap
           (iota 0)
           (λ e → e * ⟪ + 4 ⟫)
-          (λ e → unfold (λ i → i < e , i , i + ⟪ + 1 ⟫) ⟪ + 0 ⟫)) r ；
+          (λ e → nat' e)) r ；
       generate-test "flatmap-filter"
         (flatmap-filter
           (iota 0)
-          (λ e → unfold (λ i → i < e , i , i + ⟪ + 1 ⟫) ⟪ + 0 ⟫)
+          (λ e → nat' e)
           (λ e → (e % ⟪ + 7 ⟫) == ⟪ + 0 ⟫)) r ；
       generate-test "filter-flatmap"
         (filter-flatmap
           (iota 0)
           (λ e → (e % ⟪ + 3 ⟫) == ⟪ + 0 ⟫)
-          (λ e → unfold (λ i → i < e , i , i + ⟪ + 2 ⟫) ⟪ + 0 ⟫)) r ；
+          (λ e → nat' e)) r ；
       generate-test "zipWith-map"
         (zipWith-map
           (iota 0)
