@@ -28,7 +28,7 @@ module Strymonas ⦃ _ : C ⦄ where
       × (σ → Expr Int → (α → Statement) → Statement)  -- index to val
       → Producer α σ
     unfolder :
-     (σ → (Ref Bool → Statement))                     -- end?
+     (σ → (Ref Bool → Statement))                     -- continue?
      × Cardinality                                    -- cardinality
      × (σ → (α → Statement) → Statement)              -- step function
      → Producer α σ
@@ -359,7 +359,7 @@ module Strymonas ⦃ _ : C ⦄ where
   zipWith f a b p = mapRaw (λ { (x , y) k → k (f x y) }) (zip a b p)
 
   nil : ∀ { α } → SStream α
-  nil = linear (⊤ , (λ x → x ⊤.tt) , for ((λ _ _ → nop) , λ _ _ _ → nop))
+  nil = linear (⊤ , (λ k → k ⊤.tt) , unfolder ((λ _ x → x ≔ false) , at-most-one , λ _ _ → nop))
 
   -- iota n
   -- The infinite stream of natural numbers starting at n
