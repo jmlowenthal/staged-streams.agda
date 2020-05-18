@@ -79,20 +79,21 @@ module Strymonas ⦃ _ : C ⦄ where
   forUnfold-size (_ , _ , for _) = refl
   forUnfold-size (_ , _ , unfolder _) = refl
 
-  ofVecRaw : ∀ { α n m } {m≤n : m ℕ.≤ n} → Ref (Array α n) → Vec (Expr α) m → Statement
-  ofVecRaw _ Vec.[] = nop
-  ofVecRaw {n = n} {m≤n = 1≤n} x (h ∷ []) =
-    x [ ⟪ ℤ.+ (n ℕ.∸ 1) ⟫ ] ≔ h
-  ofVecRaw {n = n} {m = ℕ.suc (ℕ.suc m)} {m≤n = m+2≤n} x (h₁ ∷ h₂ ∷ t) =
-    x [ ⟪ ℤ.+ (n ℕ.∸ (ℕ.suc m) ℕ.∸ 1) ⟫ ] ≔ h₁ ；
-    ofVecRaw {m≤n = ≤-trans (n≤1+n (ℕ.suc m)) m+2≤n} x (h₂ ∷ t)
+  ofVecRaw : ∀ { α n m } → Ref (Array α n) → Vec (Expr α) m → m ℕ.≤ n → Statement
+  ofVecRaw {α} arr vec _ = helper 0 vec
+    where
+      helper : ∀ { a } → ℕ → Vec (Expr α) a → Statement
+      helper i [] = nop
+      helper i (h ∷ t) =
+        arr [ ⟪ ℤ.+ i ⟫ ] ≔ h ；
+        helper (ℕ.suc i) t
 
   ofVec : ∀ { α n } → Vec (Expr α) n → Stream α
   ofVec { α } { n } vec =
     let init : (Ref (Array α n) → Statement) → Statement
         init k =
           decl (Array α n) λ x →
-          ofVecRaw {m≤n = ≤-refl} x vec ；
+          ofVecRaw x vec ≤-refl ；
           k x
         upb : ∀ { m } → Ref (Array α m) → Ref Int → Statement
         upb { m } _ ref =
