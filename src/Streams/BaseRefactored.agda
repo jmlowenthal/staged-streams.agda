@@ -164,7 +164,7 @@ module Strymonas ⦃ _ : C ⦄ where
         cond ← term sp
       )
   iterRaw consumer (nested (prod , f)) {1} =
-    iterRaw (λ e → iterRaw consumer (f e) {∥ f e ∥ₛ} {refl}) (linear prod) {0} {refl}
+    iterRaw (λ e → iterRaw consumer (f e) {_} {refl}) (linear prod) {0} {refl}
 
   iter : ∀ { α } → (α → Statement) → SStream α → Statement
   iter f s = iterRaw f s {∥ s ∥ₛ} {refl}
