@@ -10,12 +10,12 @@ open import Data.Unit
 open import Data.Vec using (Vec ; _∷_ ; [])
 open import Function
 open import Function.Nary.NonDependent
-open import Level using (0ℓ)
+open import Level as Level using (0ℓ)
 open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 open import Streams.Base
-open import Streams.Claims as Claims using (Claim)
+open import Streams.Claims as Claims using (Claim ; _≈_)
 
 import Data.Bool.Properties as BoolP
 
