@@ -356,7 +356,7 @@ module Strymonas ⦃ _ : C ⦄ where
 
   zipWith : ∀ { α β γ } → (α → β → γ)
     → (x : SStream α) (y : SStream β) → ∥ x ∥ₛ ℕ.+ ∥ y ∥ₛ ℕ.≤ 1 → SStream γ
-  zipWith f a b p = mapRaw (λ { (x , y) k → k (f x y) }) (zip a b p)
+  zipWith f a b p = map' (λ { (x , y) → f x y }) (zip a b p)
 
   nil : ∀ { α } → SStream α
   nil = linear (⊤ , (λ k → k ⊤.tt) , unfolder ((λ _ x → x ≔ false) , at-most-one , λ _ _ → nop))
