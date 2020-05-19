@@ -15,7 +15,7 @@ open import Relation.Binary
 open import Relation.Binary.PropositionalEquality
 open import Relation.Nullary
 open import Streams.Base
-open import Streams.Claims as Claims using (Claim ; _≈_)
+open import Streams.Claims as Claims using (Claim ; Claimₚ ; _≈_)
 
 import Data.Bool.Properties as BoolP
 
@@ -41,6 +41,9 @@ postulate ≅-cong : ∀ { n } { V : Sets n L0 } { α } (f : (V ⇉ SStream α) 
 
 ProofOf : ∀ { α } → Claim α → Set
 ProofOf (s ≈ t) = s ≅ t
+
+ProofOfₚ : ∀ { n v } → Claimₚ {n} {L0} {v} → Set
+ProofOfₚ (a ≈ b) = a ≅ₚ b
 
 -- Both maps are equivalent, map is just a more efficient specialisation
 map'≅map : ∀ { α β } { f : α → Expr β } { s : SStream α } → ProofOf (Claims.map'≅map f s)
@@ -824,3 +827,469 @@ filter-true {α} {s@(nested (prod , f))} F {z} {x} =
 --     ≡⟨⟩
 --     fold F z (map' (λ { (x , y) → f x , g y }) (zip s t {p})) x
 --   ∎
+
+fold-map : ∀ { α ζ β } f z g s → ProofOfₚ (Claims.fold-map {α} {ζ} {β} f z g s)
+fold-map {α} {ζ} {β} f z g s@(linear (producer (init , for (bound , index)))) {r} =
+  begin
+    fold f z (map g s) r
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Int λ l →
+      bound sp l ；
+      for ⟪ ℤ.+ 0 ⟫ to (★ l) then λ i →
+        index sp (★ i) (λ e →
+          decl α λ t →
+          t ≔ g e ；
+          r ≔ f (★ r) (★ t))
+    )
+    ≅⟨
+      ≅ₚ-cong
+        {2}
+        {Expr β , Ref α , _}
+        (λ body → 
+          r ≔ z ；
+          init λ sp →
+            decl Int λ l →
+            bound sp l ；
+            for ⟪ ℤ.+ 0 ⟫ to (★ l) then λ i →
+              index sp (★ i) λ e →
+                decl α λ t →
+                body e t)
+        (λ e t → (t ≔ g e) ；(r ≔ f (★ r) (★ t)))
+        (λ e t → r ≔ f (★ r) (g e))
+        (≔-subst {f = λ e → r ≔ f (★ r) e})
+    ⟩
+    _
+    ≅⟨
+      ≅ₚ-cong {1} {Expr β , _}
+        (λ body → 
+          r ≔ z ；
+          init λ sp →
+            decl Int λ l →
+            bound sp l ；
+            for ⟪ ℤ.+ 0 ⟫ to (★ l) then λ i →
+              index sp (★ i) body)
+        (λ e → decl _ λ i → _)
+        (λ e → _)
+        decl-elim
+    ⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Int λ l →
+      bound sp l ；
+      for ⟪ ℤ.+ 0 ⟫ to (★ l) then λ i →
+        index sp (★ i) (λ e →
+          r ≔ f (★ r) (g e))
+    )
+    ≡⟨⟩
+    fold (λ x y → f x (g y)) z s r
+  ∎
+fold-map {α} {ζ} {β} f z g s@(linear (producer (init , unfolder (term , atMost1 , step)))) {r} =
+  begin
+    fold f z (map g s) r
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Bool λ cond →
+      cond ← term sp ；
+      if ★ cond then (
+        step sp λ e →
+          decl α λ t →
+          t ≔ g e ；
+          r ≔ f (★ r) (★ t))
+      else nop
+    )
+    ≅⟨
+      ≅ₚ-cong
+        {2}
+        {Expr β , Ref α , _}
+        (λ body → 
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            if ★ cond then (
+              step sp λ e →
+                decl α λ t →
+                body e t)
+            else nop)
+        (λ e t → (t ≔ g e) ；(r ≔ f (★ r) (★ t)))
+        (λ e t → r ≔ f (★ r) (g e))
+        (≔-subst {f = λ e → r ≔ f (★ r) e})
+
+    ⟩
+    _
+    ≅⟨
+      ≅ₚ-cong {1} {Expr β , _}
+        (λ body → 
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            if ★ cond then (step sp body) else nop)
+        (λ e → decl _ λ i → _)
+        (λ e → _)
+        decl-elim
+    ⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Bool λ cond →
+      cond ← term sp ；
+      if ★ cond then (
+        step sp λ e →
+          r ≔ f (★ r) (g e))
+      else nop
+    )
+    ≡⟨⟩
+    fold (λ x y → f x (g y)) z s r
+  ∎
+fold-map {α} {ζ} {β} f z g s@(linear (producer (init , unfolder (term , many , step)))) {r} =
+  begin
+    fold f z (map g s) r
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Bool λ cond →
+      cond ← term sp ；
+      while ★ cond then (
+        step sp (λ e →
+          decl α λ t →
+          t ≔ g e ；
+          r ≔ f (★ r) (★ t)) ；
+        cond ← term sp)
+    )
+    ≅⟨
+      ≅ₚ-cong
+        {2}
+        {Expr β , Ref α , _}
+        (λ body → 
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            while ★ cond then (
+              step sp (λ e →
+                decl α λ t →
+                body e t) ；
+              cond ← term sp))
+        _
+        _
+        (≔-subst {f = λ e → r ≔ f (★ r) e})
+
+    ⟩
+    _
+    ≅⟨
+      ≅ₚ-cong {1} {Expr β , _}
+        (λ body → 
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            while ★ cond then (step sp body ； cond ← term sp))
+        _
+        _
+        decl-elim
+    ⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Bool λ cond →
+      cond ← term sp ；
+      while ★ cond then (
+        step sp (λ e →
+          r ≔ f (★ r) (g e)) ；
+        _)
+    )
+    ≡⟨⟩
+    fold (λ x y → f x (g y)) z s r
+  ∎
+fold-map {α} {ζ} {β} f z g s@(nested (p , h)) {r} =
+  begin
+    fold f z (map g s) r
+    ≡⟨⟩
+    fold f z (nested (p , λ a → map g (h a))) r
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    iter (λ a → r ≔ f (★ r) a) (nested (p , λ a → map g (h a)))
+    )
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    iter (λ a → iter (λ b → r ≔ f (★ r) b) (map g (h a))) (linear p)
+    )
+    ≅⟨
+      ≅ₚ-cong {1}
+        (λ body → r ≔ z ； iter body (linear p))
+        (λ a → iter (λ b → r ≔ f (★ r) b) (map g (h a)))
+        (λ a → r ≔ ★ r ； iter (λ b → r ≔ f (★ r) b) (map g (h a)))
+        (≅ₛ-sym (≔-subst {f = λ e → iter (λ b → r ≔ f e b) (map g (h _))}))
+    ⟩
+    (
+    r ≔ z ；
+    iter (λ a → r ≔ ★ r ； iter (λ b → r ≔ f (★ r) b) (map g (h a))) (linear p)
+    )
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    iter (λ a → fold f (★ r) (map g (h a)) r) (linear p)
+    )
+    ≅⟨
+      ≅ₚ-cong {1}
+        (λ body → r ≔ z ； iter body (linear p))
+        (λ a → fold f (★ r) (map g (h a)) r)
+        (λ a → fold (λ x y → f x (g y)) (★ r) (h a) r)
+        (fold-map f (★ r) g (h _))
+    ⟩
+    (
+    r ≔ z ；
+    iter (λ a → fold (λ x y → f x (g y)) (★ r) (h a) r) (linear p)
+    )
+    ≅⟨ -- By the reverse argument to above
+      ≅ₚ-cong {1}
+        (λ body → r ≔ z ； iter body (linear p))
+        _
+        _
+        (≔-subst {f = λ e → iter (λ b → r ≔ f e (g b)) (h _)})
+    ⟩
+    fold (λ x y → f x (g y)) z s r
+  ∎
+
+postulate ⁇-lemma : ∀ { α } { r : Ref α } { a : Expr Bool } { b c : Expr α } → r ≔ a ⁇ b ∷ c ≅ₚ if a then r ≔ b else r ≔ c
+
+postulate ⁇-lemma+ : ∀ { α } { r : Ref α } { a : Expr Bool } { b : Expr α } → r ≔ a ⁇ b ∷ ★ r ≅ₚ if a then r ≔ b else nop
+
+fold-filter : ∀ { α ζ } f z g s → ProofOfₚ (Claims.fold-filter {α} {ζ} f z g s)
+fold-filter f z g s@(linear (producer (init , for (bound , index)))) {r} =
+  begin
+    fold f z (filter g s) r
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Int λ l →
+      l ← bound sp ；
+      for _ to _ then λ i →
+        index sp _ λ e →
+          decl Bool λ cond →
+          cond ≔ g e ；
+          if (★ cond) then r ≔ f (★ r) e else nop
+    )
+    ≅⟨
+      ≅ₚ-cong {2} {Ref Bool , Expr _ , _}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Int λ l →
+            l ← bound sp ；
+            for ⟪ ℤ.+ 0 ⟫ to ★ l then λ i →
+              index sp (★ i) λ e →
+                decl Bool λ cond →
+                body cond e)
+        (λ cond e → cond ≔ g e ； if ★ cond then r ≔ f (★ r) e else nop )
+        (λ cond e → if (g e) then r ≔ f (★ r) e else nop)
+        (≔-subst {f = λ e → if e then r ≔ f (★ r) _ else nop})
+    ⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Int λ l →
+      l ← bound sp ；
+      for _ to _ then λ i →
+        index sp _ λ e →
+          decl Bool λ cond →
+          if (g e) then r ≔ f (★ r) e else nop
+    )
+    ≅⟨
+      ≅ₚ-cong {1}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Int λ l →
+            l ← bound sp ；
+            for ⟪ ℤ.+ 0 ⟫ to ★ l then λ i →
+              index sp (★ i) λ e →
+                body e)
+        _
+        _
+        decl-elim
+    ⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Int λ l →
+      l ← bound sp ；
+      for _ to _ then λ i →
+        index sp _ λ e →
+          if (g e) then r ≔ f (★ r) e else nop
+    )
+    ≅˘⟨
+      ≅ₚ-cong {1}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Int λ l →
+            l ← bound sp ；
+            for ⟪ ℤ.+ 0 ⟫ to ★ l then λ i →
+              index sp (★ i) λ e →
+                body e)
+        _
+        _
+        ⁇-lemma+
+    ⟩
+    (
+    r ≔ z ；
+    init λ sp →
+      decl Int λ l →
+      l ← bound sp ；
+      for _ to _ then λ i →
+        index sp _ λ e →
+          r ≔ g e ⁇ f (★ r) e ∷ ★ r
+    )
+    ≡⟨⟩
+    fold (λ x y → g y ⁇ f x y ∷ x) z s r
+  ∎
+fold-filter f z g s@(linear (producer (init , unfolder (term , atMost1 , step)))) {r} =
+  begin
+    fold f z (filter g s) r
+    ≅⟨ 
+      ≅ₚ-cong {2}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            if (★ cond) then (
+              step sp λ e →
+                decl Bool λ cond₁ →
+                body cond₁ e)
+            else nop)
+        (λ cond₁ e → cond₁ ≔ g e ； if _ then _ else nop)
+        (λ cond₁ e → if _ then _ else nop)
+        (≔-subst {f = λ e → if e then r ≔ f (★ r) _ else nop})
+     ⟩
+    _
+    ≅⟨
+      ≅ₚ-cong {1}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            if (★ cond) then (
+              step sp body)
+            else nop)
+        (λ e → decl _ λ _ → if _ then _ else nop)
+        (λ e → if _ then _ else nop)
+        decl-elim
+    ⟩
+    _
+    ≅˘⟨
+      ≅ₚ-cong {1}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            if (★ cond) then (
+              step sp body)
+            else nop)
+        _
+        _
+        ⁇-lemma+
+    ⟩
+    fold (λ x y → g y ⁇ f x y ∷ x) z s r
+  ∎
+fold-filter f z g s@(linear (producer (init , unfolder (term , many , step)))) {r} =
+  begin
+    fold f z (filter g s) r
+    ≅⟨ 
+      ≅ₚ-cong {2}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            while (★ cond) then (
+              step sp (λ e →
+                decl Bool λ cond₁ →
+                body cond₁ e) ；
+              cond ← term sp))
+        (λ cond₁ e → cond₁ ≔ g e ； if _ then _ else nop)
+        (λ cond₁ e → if _ then _ else nop)
+        (≔-subst {f = λ e → if e then r ≔ f (★ r) _ else nop})
+     ⟩
+    _
+    ≅⟨
+      ≅ₚ-cong {1}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            while (★ cond) then (
+              step sp body ；
+              cond ← term sp))
+        (λ e → decl _ λ _ → if _ then _ else nop)
+        (λ e → if _ then _ else nop)
+        decl-elim
+    ⟩
+    _
+    ≅˘⟨
+      ≅ₚ-cong {1}
+        (λ body →
+          r ≔ z ；
+          init λ sp →
+            decl Bool λ cond →
+            cond ← term sp ；
+            while (★ cond) then (
+              step sp body ；
+              cond ← term sp))
+        _
+        _
+        ⁇-lemma+
+    ⟩
+    fold (λ x y → g y ⁇ f x y ∷ x) z s r
+  ∎
+fold-filter f z g s@(nested (p , h)) {r} =
+  begin
+    fold f z (filter g s) r
+    ≡⟨⟩
+    fold f z (nested (p , λ a → filter g (h a))) r
+    ≡⟨⟩
+    (
+    r ≔ z ；
+    iter (λ a → iter (λ b → r ≔ f (★ r) b) (filter g (h a))) (linear p)
+    )
+    ≅⟨
+      ≅ₚ-cong {1}
+        (λ body → r ≔ z ； iter body (linear p))
+        (λ a → iter (λ b → r ≔ f (★ r) b) (filter g (h a)))
+        (λ a → r ≔ ★ r ； iter (λ b → r ≔ f (★ r) b) (filter g (h a)))
+        (≅ₛ-sym (≔-subst {f = λ e → iter (λ b → r ≔ f e b) (filter g (h _))}))
+    ⟩
+    _
+    ≅⟨
+      ≅ₚ-cong {1}
+        (λ body → r ≔ z ； iter body (linear p))
+        (λ a → fold f (★ r) (filter g (h a)) r)
+        (λ a → fold (λ x y → g y ⁇ f x y ∷ x) (★ r) (h a) r)
+        (fold-filter f (★ r) g (h _))
+    ⟩
+    _
+    ≅⟨ -- By the reverse argument to above
+      ≅ₚ-cong {1}
+        (λ body → r ≔ z ； iter body (linear p))
+        _
+        _
+        (≔-subst {f = λ e → iter (λ b → r ≔ g b ⁇ f (★ r) b ∷ (★ r)) (h _)})
+    ⟩
+    fold (λ x y → g y ⁇ f x y ∷ x) z s r
+  ∎
+
