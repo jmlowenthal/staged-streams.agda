@@ -25,11 +25,12 @@ open C.C ⦃ ... ⦄
 open Semantics ⦃ ... ⦄
 open ≅-Reasoning
 
+-- TODO: Explore Function.Equality
 infix 0 _≅_
 _≅_ : ∀ { α } { n } { V : Sets n L0 } → Rel (V ⇉ SStream α) 0ℓ
-_≅_ {α} {0} s t = ∀ { β } → (f : Expr β → α → Expr β) → ∀ { z x }
+_≅_ {α} {0} s t = ∀ { β } (f : Expr β → α → Expr β) { z x }
   → fold f z s x ≅ₚ fold f z t x
-_≅_ {α} {ℕ.suc n} {H , T} s t = ∀ { h : H } → _≅_ {α} {n} {T} (s h) (t h)
+_≅_ {α} {ℕ.suc n} F G = ∀ { a } → F a ≅ G a
 
 ≅-equiv : ∀ { α } → IsEquivalence (_≅_ {α} {0})
 ≅-equiv {α} = record {
