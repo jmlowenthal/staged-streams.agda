@@ -368,7 +368,7 @@ iota n = unfold (λ n → (true , n , n + ⟪ int 1 ⟫)) ⟪ int n ⟫
 -- nat n
 -- The stream of natural numbers less than n
 nat' : ∀ ⦃ _ : C ⦄ → Expr Int → Stream Int
-nat' n = unfold (λ x → (x < n , x , x + ⟪ int 1 ⟫)) ⟪ int 0 ⟫
+nat' n = linear (producer {σ = ⊤} ((λ k → k ⊤.tt) , for ((λ _ r → r ≔ n) , λ _ i k → k i)))
 
 nat : ∀ ⦃ _ : C ⦄ → ℕ → Stream Int
 nat n = nat' ⟪ int n ⟫

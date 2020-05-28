@@ -7,6 +7,7 @@ open import IO hiding (return)
 open import Data.Nat using (ℕ)
 open import Data.Integer using (+_)
 open import Data.Vec using (Vec ; _∷_ ; [] ; [_])
+open import Data.Product using (_×_ ; _,_)
 
 module Main where
 
@@ -49,3 +50,12 @@ main =
       r ← ((nat 100) ▹ filter (λ x → (x % ⟪ + 2 ⟫) == ⟪ + 0 ⟫) ▹ sum) ；
       show (★ r))
 
+eg : ∀ ⦃ _ : C ⦄ → Statement
+eg =
+  decl Int λ x →
+  x ← (
+    nat 100
+    ▹ map (λ x → x * x)
+    ▹ fold _+_ ⟪ + 0 ⟫)
+
+_ = ?
