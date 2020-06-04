@@ -1,3 +1,4 @@
 [submodule "lib/agda-c"]
 	path = lib/agda-c
 	url = git@github.com:jmlowenthal/agda-c.git
+	branch = v0.1
