@@ -1,20 +1,15 @@
 module Streams.Base where
 
-open import C
-open C.C ⦃ ... ⦄
+open import C.Lang
+open Lang ⦃ ... ⦄
 
 open import Data.Unit using (⊤)
-open import Data.Integer using (ℤ) renaming (+_ to int)
+open import Data.Integer as ℤ using (ℤ ; +_)
 open import Data.Nat using (ℕ) renaming (_<_ to _<ₙ_ ; _≤_ to _≤ₙ_ ; _∸_ to _-ₙ_ ; _+_ to _+ₙ_)
 open import Data.Product using (_×_ ; _,_ ; ∃ ; proj₁ ; proj₂)
 open import Data.Vec using (Vec; _∷_; [])
 open import Data.Nat.Properties
-open import Relation.Binary
 open import Relation.Binary.PropositionalEquality using (_≡_ ; refl)
-import Induction.WellFounded as Wf
-open import Function
-import Level
-import Data.Integer as ℤ
 
 -- Stream Fusion, to Completeness ----------------------------------------
 
@@ -23,38 +18,38 @@ data CardT : Set where
   many : CardT
 
 -- ProducerT (element type) (internal state) ⦃ implementation ⦄
-data ProducerT (α σ : Set) ⦃ _ : C ⦄ : Set where
+data ProducerT (α σ : Set) ⦃ _ : Lang ⦄ : Set where
   -- for : (state → index) × (state → index → continuation → void)
   for : (σ → Ref Int → Statement) × (σ → Expr Int → (α → Statement) → Statement) → ProducerT α σ
   -- unfolder : (state → continue?) × cardinality × (state → continuation → void)
   unfolder : (σ → Ref Bool → Statement) × CardT × (σ → (α → Statement) → Statement) → ProducerT α σ
 
 -- Producer (element type) ⦃ implementation ⦄
-data Producer (α : Set) ⦃ _ : C ⦄ : Set₁ where
+data Producer (α : Set) ⦃ _ : Lang ⦄ : Set₁ where
   -- producer : ⦃ internal state ⦄ → (initialisation function) × producer
   producer : ∀ { σ } → ((σ → Statement) → Statement) × (ProducerT α σ) → Producer α
 
 -- Stream (element type) ⦃ implementation ⦄
-data SStream ⦃ _ : C ⦄ : Set → Set₁ where
+data SStream ⦃ _ : Lang ⦄ : Set → Set₁ where
   -- linear : producer of code elements
   linear : ∀ { α } → Producer α → SStream α
   -- nested : (producer of stream code) × (stream code → stream)
   nested : ∀ { α β } → Producer β × (β → SStream α) → SStream α
 
-Stream : ∀ ⦃ _ : C ⦄ → c_type → Set₁
+Stream : ∀ ⦃ _ : Lang ⦄ → c_type → Set₁
 Stream α = SStream (Expr α)
 
 -- Show that the SStream is always getting 'smaller', for termination checking
-∥_∥ₛ : ∀ ⦃ _ : C ⦄ { α } → SStream α → ℕ
+∥_∥ₛ : ∀ ⦃ _ : Lang ⦄ { α } → SStream α → ℕ
 ∥ linear _ ∥ₛ = 0
 ∥ nested _ ∥ₛ = 1
 
 -- Show that the Producer is always getting 'smaller', for termination checking
-∥_∥ₚ : ∀ ⦃ _ : C ⦄ { α } → Producer α → ℕ
+∥_∥ₚ : ∀ ⦃ _ : Lang ⦄ { α } → Producer α → ℕ
 ∥ producer (_ , unfolder _) ∥ₚ = 0
 ∥ producer (_ , for _) ∥ₚ = 1
 
-forUnfold : ∀ ⦃ _ : C ⦄ { α } → Producer α → Producer α
+forUnfold : ∀ ⦃ _ : Lang ⦄ { α } → Producer α → Producer α
 forUnfold { α } (producer { σ = σ } (init , for (bound , index))) =
   producer (init' , unfolder (term , many , step))
   where
@@ -62,7 +57,7 @@ forUnfold { α } (producer { σ = σ } (init , for (bound , index))) =
     init' k =
       init (λ s0 →
         decl Int λ i →
-        i ≔ ⟪ int 0 ⟫ ；
+        i ≔ ⟪ + 0 ⟫ ；
         k (i , s0))
     term : (Ref Int × σ) → Ref Bool → Statement
     term (i , s0) ref =
@@ -71,23 +66,23 @@ forUnfold { α } (producer { σ = σ } (init , for (bound , index))) =
       ref ≔ (★ i) <= (★ x)
     step : (Ref Int × σ) →  (α → Statement) → Statement
     step (i , s0) k =
-      index s0 (★ i) (λ a → i ≔ (★ i) + ⟪ int 1 ⟫ ； k a)
+      index s0 (★ i) (λ a → i ≔ (★ i) + ⟪ + 1 ⟫ ； k a)
 forUnfold (producer (init , unfolder x)) =
   producer (init , unfolder x)
 
-forUnfold-size : ∀ ⦃ _ : C ⦄ { α } (p : Producer α) → ∥ forUnfold p ∥ₚ ≡ 0
+forUnfold-size : ∀ ⦃ _ : Lang ⦄ { α } (p : Producer α) → ∥ forUnfold p ∥ₚ ≡ 0
 forUnfold-size (producer (_ , for _)) = refl
 forUnfold-size (producer (_ , unfolder _)) = refl
 
-ofVecRaw : ∀ ⦃ _ : C ⦄ { α n m } {m≤n : m ≤ₙ n} → Ref (Array α n) → Vec (Expr α) m → Statement
+ofVecRaw : ∀ ⦃ _ : Lang ⦄ { α n m } {m≤n : m ≤ₙ n} → Ref (Array α n) → Vec (Expr α) m → Statement
 ofVecRaw _ Vec.[] = nop
 ofVecRaw {n = n} {m≤n = 1≤n} x (h ∷ []) =
-  x [ ⟪ int (n -ₙ 1) ⟫ ] ≔ h
+  x [ ⟪ + (n -ₙ 1) ⟫ ] ≔ h
 ofVecRaw {n = n} {m = ℕ.suc (ℕ.suc m)} {m≤n = m+2≤n} x (h₁ ∷ h₂ ∷ t) =
-  x [ ⟪ int (n -ₙ (ℕ.suc m) -ₙ 1) ⟫ ] ≔ h₁ ；
+  x [ ⟪ + (n -ₙ (ℕ.suc m) -ₙ 1) ⟫ ] ≔ h₁ ；
   ofVecRaw {m≤n = ≤-trans (n≤1+n (ℕ.suc m)) m+2≤n} x (h₂ ∷ t)
 
-ofVec : ∀ ⦃ _ : C ⦄ { α n } → Vec (Expr α) n → Stream α
+ofVec : ∀ ⦃ _ : Lang ⦄ { α n } → Vec (Expr α) n → Stream α
 ofVec { α } { n } vec =
   let init : (Ref (Array α n) → Statement) → Statement
       init k =
@@ -96,7 +91,7 @@ ofVec { α } { n } vec =
         k x
       upb : ∀ { m } → Ref (Array α m) → Ref Int → Statement
       upb { m } _ ref =
-        ref ≔ ⟪ int (m -ₙ 1) ⟫
+        ref ≔ ⟪ + (m -ₙ 1) ⟫
       index : ∀ { m } → Ref (Array α m) → Expr Int → (Expr α → Statement) → Statement
       index arr i k =
         decl α λ el →
@@ -105,13 +100,13 @@ ofVec { α } { n } vec =
   in
     linear (producer (init , for (upb , index)))
 
-ofArr : ∀ ⦃ _ : C ⦄ { α n } → Ref (Array α n) → Stream α
+ofArr : ∀ ⦃ _ : Lang ⦄ { α n } → Ref (Array α n) → Stream α
 ofArr {α} {n} arr = linear (producer (init , for (upb , index)))
   where
     init : (Ref (Array α n) → Statement) → Statement
     init k = k arr
     upb : ∀ { m } → Ref (Array α m) → Ref Int → Statement
-    upb {m} _ ref = ref ≔ ⟪ int (m -ₙ 1) ⟫
+    upb {m} _ ref = ref ≔ ⟪ + (m -ₙ 1) ⟫
     index : ∀ { m } → Ref (Array α m) → Expr Int → (Expr α → Statement) → Statement
     index arr i k =
       decl α λ el →
@@ -119,7 +114,7 @@ ofArr {α} {n} arr = linear (producer (init , for (upb , index)))
       k (★ el) -- TODO: requires i ∈ n
 
 -- unfold ≡ λ f z → Functor.fmap f (Applicative.pure z)
-unfold : ∀ ⦃ _ : C ⦄ → ∀ { α ζ }
+unfold : ∀ ⦃ _ : Lang ⦄ → ∀ { α ζ }
   → (Expr ζ → (Expr Bool × Expr α × Expr ζ)) → Expr ζ → Stream α
 unfold { α } { ζ } f x =
   linear (producer ((init , unfolder (term , many , step))))
@@ -141,13 +136,13 @@ unfold { α } { ζ } f x =
         a ≔ a' ；
         z ≔ z'
 
-iterRaw : ∀ ⦃ _ : C ⦄ { α } → (α → Statement) → (x : SStream α)
+iterRaw : ∀ ⦃ _ : Lang ⦄ { α } → (α → Statement) → (x : SStream α)
   → {n : ℕ} { _ : n ≡ ∥ x ∥ₛ } → Statement
 iterRaw consumer (linear (producer (init , for (bound , index)))) = 
   init (λ sp →
     decl Int λ l →
     l ← bound sp ；
-    for ⟪ int 0 ⟫ to ★ l then λ i →
+    for ⟪ + 0 ⟫ to ★ l then λ i →
       index sp (★ i) consumer)
 iterRaw consumer (linear (producer (init , unfolder (term , atMost1 , step)))) =
   init λ sp →
@@ -165,15 +160,15 @@ iterRaw consumer (linear (producer (init , unfolder (term , many , step)))) =
 iterRaw consumer (nested (prod , f)) {1} =
   iterRaw (λ e → iterRaw consumer (f e) {∥ f e ∥ₛ} {refl}) (linear prod) {0} {refl}
 
-iter : ∀ ⦃ _ : C ⦄ { α } → (α → Statement) → SStream α → Statement
+iter : ∀ ⦃ _ : Lang ⦄ { α } → (α → Statement) → SStream α → Statement
 iter f s = iterRaw f s {∥ s ∥ₛ} {refl}
 
-fold : ∀ ⦃ _ : C ⦄ { α ζ } → (Expr ζ → α → Expr ζ) → Expr ζ → SStream α → (Ref ζ → Statement)
+fold : ∀ ⦃ _ : Lang ⦄ { α ζ } → (Expr ζ → α → Expr ζ) → Expr ζ → SStream α → (Ref ζ → Statement)
 fold f z s acc =
   acc ≔ z ；
   iter (λ a → acc ≔ f (★ acc) a) s
 
-mapRaw : ∀ ⦃ _ : C ⦄ → ∀ { α β } → (α → (β → Statement) → Statement)
+mapRaw : ∀ ⦃ _ : Lang ⦄ → ∀ { α β } → (α → (β → Statement) → Statement)
   → SStream α → SStream β
 mapRaw tr (linear (producer (init , for (bound , index)))) =
   let index' s i k = index s i (λ e → tr e k) in
@@ -184,7 +179,7 @@ mapRaw tr (linear (producer (init , unfolder (term , card , step)))) =
 mapRaw tr (nested (p , f)) = nested (p , (λ a → mapRaw tr (f a)))
 
 -- map ≡ Functor.fmap
-map : ∀ ⦃ _ : C ⦄ → ∀ { α β } → (α → Expr β) → SStream α → Stream β
+map : ∀ ⦃ _ : Lang ⦄ → ∀ { α β } → (α → Expr β) → SStream α → Stream β
 map { β = β } f =
   mapRaw (λ a k →
     decl β λ t →
@@ -193,19 +188,19 @@ map { β = β } f =
   )
 
 -- Inefficient, but more general and ≅-equivalent
-map' : ∀ ⦃ _ : C ⦄ { α β } → (α → β) → SStream α → SStream β
+map' : ∀ ⦃ _ : Lang ⦄ { α β } → (α → β) → SStream α → SStream β
 map' f = mapRaw (λ a k → k (f a))
 
 -- flatmap ≡ λ f x → x Monad.>>= f
-flatmap : ∀ ⦃ _ : C ⦄ → ∀ { α β } → (α → SStream β) → SStream α → SStream β
+flatmap : ∀ ⦃ _ : Lang ⦄ → ∀ { α β } → (α → SStream β) → SStream α → SStream β
 flatmap {α = α} f (linear x) = nested (x , f) -- TODO: can we eliminate this case when α is Bool or other prim type
 flatmap f (nested (x , g)) = nested (x , λ a → flatmap f (g a))
 
-filter : ∀ ⦃ _ : C ⦄ { α } → (α → Expr Bool) → SStream α → SStream α
+filter : ∀ ⦃ _ : Lang ⦄ { α } → (α → Expr Bool) → SStream α → SStream α
 filter f = flatmap (
   λ x → linear (producer ((λ k → k x) , unfolder ((λ a r → r ≔ f a) , atMost1 , λ a k → k a))))
 
-addToProducerRaw : ∀ ⦃ _ : C ⦄ { α } → (Ref Bool → Statement) → (p : Producer α)
+addToProducerRaw : ∀ ⦃ _ : Lang ⦄ { α } → (Ref Bool → Statement) → (p : Producer α)
   → { n : ℕ } { _ : n ≡ ∥ p ∥ₚ } → Producer α
 addToProducerRaw new (producer (init , unfolder (term , many , step))) =
   producer (init , unfolder (term' , many , step))
@@ -222,15 +217,15 @@ addToProducerRaw new (producer (init , unfolder (term , atMost1 , step))) =
 addToProducerRaw new (producer (init , for x)) {1} =
   addToProducerRaw new (forUnfold (producer (init , for x))) {0} {refl}
 
-addToProducer : ∀ ⦃ _ : C ⦄ → ∀ { α } → (Ref Bool → Statement) → Producer α → Producer α
+addToProducer : ∀ ⦃ _ : Lang ⦄ → ∀ { α } → (Ref Bool → Statement) → Producer α → Producer α
 addToProducer new p = addToProducerRaw new p {∥ p ∥ₚ} {refl}
 
-moreTermination : ∀ ⦃ _ : C ⦄ → ∀ { α } → (Ref Bool → Statement) → SStream α → SStream α
+moreTermination : ∀ ⦃ _ : Lang ⦄ → ∀ { α } → (Ref Bool → Statement) → SStream α → SStream α
 moreTermination new (linear p) = linear (addToProducer new p)
 moreTermination new (nested (p , f)) =
   nested (addToProducer new p , λ a → moreTermination new (f a))
 
-addNr : ∀ ⦃ _ : C ⦄ → ∀ { α } → Expr Int → (p : Producer α) → Producer (Ref Int × α)
+addNr : ∀ ⦃ _ : Lang ⦄ → ∀ { α } → Expr Int → (p : Producer α) → Producer (Ref Int × α)
 addNr n (producer { σ = σ } (init , unfolder (term , card , step))) =
   producer (init' , unfolder (term' card , card , step'))
   where
@@ -239,22 +234,22 @@ addNr n (producer { σ = σ } (init , unfolder (term , card , step))) =
     term' : CardT → Ref Int × σ → Ref Bool → Statement
     term' many (nr , s) r =
       r ← term s ；
-      r ≔ (★ r) && ((★ nr) > ⟪ int 0 ⟫)
+      r ≔ (★ r) && ((★ nr) > ⟪ + 0 ⟫)
     term' atMost1 (nr , s) = term s
     step' : Ref Int × σ → (Ref Int × _ → Statement) → Statement
     step' (nr , s) k = step s (λ el → k (nr , el))
 addNr _ (producer (_ , for _)) =
-  producer ((λ k → k ⊤.tt) , for ((λ _ r → r ≔ ⟪ int 0 ⟫) , (λ _ _ _ → nop)))
+  producer ((λ k → k ⊤.tt) , for ((λ _ r → r ≔ ⟪ + 0 ⟫) , (λ _ _ _ → nop)))
 
-take : ∀ ⦃ _ : C ⦄ → Expr Int → ∀ { α } → SStream α → SStream α
+take : ∀ ⦃ _ : Lang ⦄ → Expr Int → ∀ { α } → SStream α → SStream α
 take n (linear (producer (init , for (bound , index)))) =
   linear (producer (
     init , for (
       (λ s r →
         decl Int λ b →
         b ← bound s ；
-        if ((n - ⟪ int 1 ⟫) < (★ b)) then
-          r ≔ n - ⟪ int 1 ⟫
+        if ((n - ⟪ + 1 ⟫) < (★ b)) then
+          r ≔ n - ⟪ + 1 ⟫
         else
           r ≔ ★ b
       )
@@ -263,7 +258,7 @@ take n (linear (producer (init , for (bound , index)))) =
   )
 take n (linear p@(producer (init , unfolder x))) =
   mapRaw
-    (λ { (nr , el) k → nr ≔ ★ nr - ⟪ int 1 ⟫ ； k el })
+    (λ { (nr , el) k → nr ≔ ★ nr - ⟪ + 1 ⟫ ； k el })
     (linear (addNr n (producer (init , unfolder x))))
 take n (nested { β = α } (p , f)) =
   nested (
@@ -271,13 +266,13 @@ take n (nested { β = α } (p , f)) =
     λ nra →
       let nr , a = nra in
         mapRaw
-          (λ el k → nr ≔ ★ nr - ⟪ int 1 ⟫ ； k el)
-          (moreTermination (λ r → r ≔ (★ nr) > ⟪ int 0 ⟫) (f a))
+          (λ el k → nr ≔ ★ nr - ⟪ + 1 ⟫ ； k el)
+          (moreTermination (λ r → r ≔ (★ nr) > ⟪ + 0 ⟫) (f a))
   )
 
 -- TODO: drop
 
-zipProducer : ∀ ⦃ _ : C ⦄ { α β } → (a : Producer α) → (b : Producer β)
+zipProducer : ∀ ⦃ _ : Lang ⦄ { α β } → (a : Producer α) → (b : Producer β)
   → { n : ℕ } { _ : n ≡ ∥ a ∥ₚ } { m : ℕ } { _ : m ≡ ∥ b ∥ₚ }
   → Producer (α × β)
 zipProducer {α} {β} (producer {σ₁} (i₁ , for (b₁ , x₁))) (producer {σ₂} (i₂ , for (b₂ , x₂))) =
@@ -316,7 +311,7 @@ zipProducer a@(producer (_ , for _)) b@(producer (_ , unfolder _)) {n = 1} {refl
 zipProducer a@(producer (_ , unfolder _)) b@(producer (_ , for _)) {n = 0} {refl} {1} {refl} =
   zipProducer a (forUnfold b) {n = 0} {refl} {0} {refl}
 
-pushLinear : ∀ ⦃ _ : C ⦄ { α β γ }
+pushLinear : ∀ ⦃ _ : Lang ⦄ { α β γ }
   → (p : Producer α) (q : Producer β) {_ : ∥ p ∥ₚ ≡ 0} {_ : ∥ q ∥ₚ ≡ 0}
   → (β → SStream γ) → SStream (α × γ)
 pushLinear {α} {β} {γ} (producer {σ₁} (init₁ , unfolder (term₁ , _ , step₁))) (producer {σ₂} (init₂ , unfolder (term₂ , _ , step₂))) f =
@@ -342,7 +337,7 @@ pushLinear {α} {β} {γ} (producer {σ₁} (init₁ , unfolder (term₁ , _ , s
         (moreTermination (λ x → x ≔ ★ r) (f b))
 
 -- Prohibt zip of two nested streams
-zip : ∀ ⦃ _ : C ⦄ { α β } (x : SStream α) (y : SStream β) { _ : ∥ x ∥ₛ +ₙ ∥ y ∥ₛ ≤ₙ 1 }
+zip : ∀ ⦃ _ : Lang ⦄ { α β } (x : SStream α) (y : SStream β) { _ : ∥ x ∥ₛ +ₙ ∥ y ∥ₛ ≤ₙ 1 }
   → SStream (α × β)
 zip (linear p) (linear q) {_≤ₙ_.z≤n} =
   linear (zipProducer p q {_} {refl} {_} {refl})
@@ -353,26 +348,26 @@ zip (nested (p , f)) (linear q) {_≤ₙ_.s≤s _≤ₙ_.z≤n} =
     (λ { (y , x) k → k (x , y) })
     (pushLinear (forUnfold q) (forUnfold p) {forUnfold-size q} {forUnfold-size p} f)
 
-zipWith : ∀ ⦃ _ : C ⦄ { α β γ } → (α → β → γ)
+zipWith : ∀ ⦃ _ : Lang ⦄ { α β γ } → (α → β → γ)
   → (x : SStream α) (y : SStream β) { _ : ∥ x ∥ₛ +ₙ ∥ y ∥ₛ ≤ₙ 1 } → SStream γ
 zipWith f a b {p} = mapRaw (λ { (x , y) k → k (f x y) }) (zip a b {p})
 
-nil : ∀ ⦃ _ : C ⦄ → ∀ { α } → SStream α
+nil : ∀ ⦃ _ : Lang ⦄ → ∀ { α } → SStream α
 nil = linear (producer { σ = ⊤ } ((λ x → x ⊤.tt) , for ((λ _ _ → nop) , λ _ _ _ → nop)))
 
 -- iota n
 -- The infinite stream of natural numbers starting at n
-iota : ∀ ⦃ _ : C ⦄ → ℕ → Stream Int
-iota n = unfold (λ n → (true , n , n + ⟪ int 1 ⟫)) ⟪ int n ⟫
+iota : ∀ ⦃ _ : Lang ⦄ → ℕ → Stream Int
+iota n = unfold (λ n → (true , n , n + ⟪ + 1 ⟫)) ⟪ + n ⟫
 
 -- nat n
 -- The stream of natural numbers less than n
-nat' : ∀ ⦃ _ : C ⦄ → Expr Int → Stream Int
+nat' : ∀ ⦃ _ : Lang ⦄ → Expr Int → Stream Int
 nat' n = linear (producer {σ = ⊤} ((λ k → k ⊤.tt) , for ((λ _ r → r ≔ n) , λ _ i k → k i)))
 
-nat : ∀ ⦃ _ : C ⦄ → ℕ → Stream Int
-nat n = nat' ⟪ int n ⟫
+nat : ∀ ⦃ _ : Lang ⦄ → ℕ → Stream Int
+nat n = nat' ⟪ + n ⟫
 
-_▹_ : ∀ ⦃ _ : C ⦄ → ∀ { α n } → ∀ { β : Set n } → Stream α → (Stream α → β) → β
+_▹_ : ∀ ⦃ _ : Lang ⦄ → ∀ { α n } → ∀ { β : Set n } → Stream α → (Stream α → β) → β
 x ▹ f = f x 
 infixl 0 _▹_
