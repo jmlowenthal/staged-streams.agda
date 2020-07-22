@@ -1,4 +1,4 @@
-open import C.Base
+open import C.Lang
 open import Streams.Base
 open import Data.Product using (_×_ ; _,_)
 open import Function
@@ -7,9 +7,9 @@ open import Relation.Binary.PropositionalEquality
 open import Data.Nat as ℕ using (ℕ)
 open import Data.Nat.Properties
 
-module Streams.Claims ⦃ _ : C ⦄ where
+module Streams.Claims ⦃ _ : Lang ⦄ where
 
-open C ⦃ ... ⦄
+open Lang ⦃ ... ⦄
 
 -- Claim that two streams are equivalent
 record Claim (α : Set) : Set₁ where
@@ -19,11 +19,11 @@ record Claim (α : Set) : Set₁ where
     rhs : SStream α
 
 -- Claim that two programs are equivalent
-record Claimₚ { n } { l : Levels n } { v : Sets n l } : Set (⨆ n l) where
+record Claimₚ : Set where
   constructor _≈_
   field
-    lhs : v ⇉ Statement
-    rhs : v ⇉ Statement
+    lhs : Statement
+    rhs : Statement
 
 map'≅map : ∀ { α β } → (α → Expr β) → SStream α → Claim (Expr β)
 map'≅map f s = map' f s ≈ map f s
@@ -72,12 +72,12 @@ filter-flatmap s f g = filter f (flatmap g s) ≈ flatmap ((filter f) ∘ g) s
 --          (λ r → r ← fold f z {!tail s!} ； r ≔ f  (★ r) {!head s!}))
 
 fold-map : ∀ { α ζ β } → (Expr ζ → Expr α → Expr ζ) → Expr ζ
-  → (Expr β → Expr α) → Stream β → Claimₚ
-fold-map f z g s = fold f z (map g s) ≈ fold (λ x y → f x (g y)) z s
+  → (Expr β → Expr α) → Stream β → Ref ζ → Claimₚ
+fold-map f z g s x = fold f z (map g s) x ≈ fold (λ x y → f x (g y)) z s x
 
 fold-filter : ∀ { α ζ } → (Expr ζ → Expr α → Expr ζ) → Expr ζ → (Expr α → Expr Bool)
-  → Stream α → Claimₚ
-fold-filter f z g s = fold f z (filter g s) ≈ fold (λ x y → g y ⁇ f x y ∷ x) z s
+  → Stream α → Ref ζ → Claimₚ
+fold-filter f z g s x = fold f z (filter g s) x ≈ fold (λ x y → g y ⁇ f x y ∷ x) z s x
 
 -- fold-flatmap : ∀ { α ζ β } → (Expr ζ → α → Expr ζ) → Expr ζ → (β → SStream α)
 --   → SStream β → Claimₚ
